@@ -3,6 +3,7 @@
 const express   = require('express');
 const { v4: uuidv4 } = require('uuid');
 const rateLimit = require('express-rate-limit');
+const apicache  = require('apicache');
 
 const { ZONES, STALLS, RATE, NODE_ENV } = require('../config');
 const sim              = require('../services/simulation');
@@ -38,6 +39,10 @@ const simulateLimiter = isTest
       message: { error: 'Too many simulation changes.' },
     });
 
+// ─── Cache ────────────────────────────────────────────────────────────────────
+const cache = apicache.middleware;
+const shortCache = isTest ? (_req, _res, next) => next() : cache('2 seconds');
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 router.get('/health', (_req, res) => {
   const mem = process.memoryUsage();
@@ -54,7 +59,7 @@ router.get('/health', (_req, res) => {
 });
 
 // ─── Heatmap ─────────────────────────────────────────────────────────────────
-router.get('/heatmap', (_req, res) => {
+router.get('/heatmap', shortCache, (_req, res) => {
   const heatmap = Object.entries(sim.density).map(([id, density]) => ({
     zone: id, name: ZONES[id].name, density,
     level: density > 0.75 ? 'critical' : density > 0.50 ? 'high' : density > 0.25 ? 'moderate' : 'low',
@@ -65,7 +70,7 @@ router.get('/heatmap', (_req, res) => {
 });
 
 // ─── Zones ───────────────────────────────────────────────────────────────────
-router.get('/zones', (_req, res) => {
+router.get('/zones', shortCache, (_req, res) => {
   const zones = Object.values(ZONES).map(z => ({
     ...z,
     density:      sim.density[z.id],
@@ -108,7 +113,7 @@ router.post('/route', (req, res) => {
 });
 
 // ─── Queue / Stalls ───────────────────────────────────────────────────────────
-router.get('/queue', (_req, res) => {
+router.get('/queue', shortCache, (_req, res) => {
   const stalls = STALLS.map(stall => {
     const zoneDensity = sim.density[stall.zone] || 0;
     const waitTime    = Math.round(stall.baseWait * (1 + zoneDensity * 2));
@@ -195,12 +200,12 @@ router.get('/ai-insights', catchAsync(async (_req, res) => {
 }));
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────
-router.get('/alerts', (_req, res) => {
+router.get('/alerts', shortCache, (_req, res) => {
   res.json({ alerts: sim.alerts.slice(0, 10), timestamp: Date.now() });
 });
 
 // ─── Metrics ─────────────────────────────────────────────────────────────────
-router.get('/metrics', (_req, res) => {
+router.get('/metrics', shortCache, (_req, res) => {
   res.json({ metrics: sim.getMetrics(), timestamp: Date.now() });
 });
 

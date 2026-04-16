@@ -35,7 +35,7 @@ function requireAdminKey(req, res, next) {
     if (bufferA.length === bufferB.length) {
       isEqual = crypto.timingSafeEqual(bufferA, bufferB);
     }
-  } catch (err) {
+  } catch (_err) {
     // Handle any crypto errors gracefully
   }
 

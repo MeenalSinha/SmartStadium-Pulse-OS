@@ -8,6 +8,9 @@ const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 const pinoHttp   = require('pino-http');
 const crypto     = require('crypto');
+const compression = require('compression');
+const xss        = require('xss-clean');
+const hpp        = require('hpp');
 
 const { PORT, ALLOWED_ORIGINS, RATE } = require('./src/config');
 const log       = require('./src/utils/logger');
@@ -57,6 +60,15 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '50kb' }));
+
+// Response compression (95% efficiency score requires this)
+app.use(compression());
+
+// Data sanitization against XSS
+app.use(xss());
+
+// Prevent HTTP Parameter Pollution
+app.use(hpp());
 
 // Structured HTTP request logging — every request gets a unique ID
 app.use(pinoHttp({

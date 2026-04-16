@@ -2,7 +2,7 @@
 
 const { v4: uuidv4 }  = require('uuid');
 const EventEmitter    = require('events');
-const { ZONES, STALLS, SIM_PROFILES, SIM } = require('../config');
+const { ZONES, SIM_PROFILES, SIM } = require('../config');
 const db  = require('../db');
 const log = require('../utils/logger');
 
