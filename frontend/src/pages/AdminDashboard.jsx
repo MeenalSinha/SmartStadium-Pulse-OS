@@ -109,7 +109,7 @@ export default function AdminDashboard({ simData, mode, onModeChange }) {
                 <span style={{ fontSize: 18 }}>✨</span> Deep Operations Insight (Vertex AI)
               </div>
               <div className="card-subtitle">
-                Powered by Google Cloud Gemini 1.5 Flash • {aiInsights.cached ? 'Cached Response' : 'Live GenAI Inference'}
+                Powered by Google Cloud Gemini 2.5 Flash • {aiInsights.cached ? 'Cached Response' : 'Live GenAI Inference'}
               </div>
             </div>
             <span className="badge" style={{ background: '#8B5CF6', color: '#fff' }}>

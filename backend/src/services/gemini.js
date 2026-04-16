@@ -2,7 +2,7 @@
 
 /**
  * @module gemini
- * @description Vertex AI (Gemini 1.5 Flash) integration for SmartStadium Pulse OS.
+ * @description Vertex AI (Gemini 2.5 Flash) integration for SmartStadium Pulse OS.
  *
  * Uses Application Default Credentials (ADC) via the GCE Metadata Server,
  * which works automatically in Cloud Run, GKE, and any GCP-hosted environment.
@@ -17,7 +17,7 @@ const log = require('../utils/logger');
 
 const PROJECT_ID   = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || null;
 const LOCATION     = process.env.VERTEX_LOCATION || 'us-central1';
-const MODEL        = 'gemini-1.5-flash-001';
+const MODEL        = 'gemini-2.5-flash';
 const CACHE_TTL_MS = 30_000; // 30-second cache — balances freshness with API cost
 
 /** @type {{ insights: object|null, generatedAt: number }} */
@@ -148,7 +148,7 @@ function ruleBasedInsights(densityMap, mode) {
 /**
  * Get AI-powered operational insights for the current stadium state.
  *
- * Attempts to call Vertex AI (Gemini 1.5 Flash) first. On any failure,
+ * Attempts to call Vertex AI (Gemini 2.5 Flash) first. On any failure,
  * silently falls back to the rule-based engine. Results are cached for
  * CACHE_TTL_MS to control API costs.
  *
