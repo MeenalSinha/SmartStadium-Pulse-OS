@@ -21,6 +21,7 @@ export default function AdminDashboard({ simData, mode, onModeChange }) {
   const [history,    setHistory]    = useState([]);
   const [stallData,  setStallData]  = useState([]);
   const [modeEvents, setModeEvents] = useState([]);
+  const [aiInsights, setAiInsights] = useState(null);
   const [flashKey,   setFlashKey]   = useState(0);
   const prevModeRef = useRef(mode);
 
@@ -46,6 +47,18 @@ export default function AdminDashboard({ simData, mode, onModeChange }) {
       })))).catch(() => {});
     }
   }, [simData, mode]);
+
+  // Poll Vertex AI insights every 15s (backend caches for 30s)
+  useEffect(() => {
+    const fetchAI = () => {
+      api.getAiInsights().then(res => {
+        if (res.insights) setAiInsights(res.insights);
+      }).catch(console.error);
+    };
+    fetchAI();
+    const iv = setInterval(fetchAI, 15000);
+    return () => clearInterval(iv);
+  }, [mode]); // refetch on mode change as well
 
   // Dramatic mode change flash
   useEffect(() => {
@@ -86,6 +99,34 @@ export default function AdminDashboard({ simData, mode, onModeChange }) {
 
       {/* THE WOW MOMENT — AI Impact Panel */}
       <AIImpactPanel metrics={metrics} mode={mode} density={density} key={flashKey} />
+
+      {/* Google Cloud Vertex AI Insights */}
+      {aiInsights && (
+        <div className="card mb-4" style={{ borderLeft: '4px solid #8B5CF6', background: 'linear-gradient(90deg, rgba(139,92,246,0.1) 0%, rgba(9,14,26,1) 100%)' }}>
+          <div className="card-header" style={{ marginBottom: 12 }}>
+            <div>
+              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>✨</span> Deep Operations Insight (Vertex AI)
+              </div>
+              <div className="card-subtitle">
+                Powered by Google Cloud Gemini 1.5 Flash • {aiInsights.cached ? 'Cached Response' : 'Live GenAI Inference'}
+              </div>
+            </div>
+            <span className="badge" style={{ background: '#8B5CF6', color: '#fff' }}>
+              Model: {aiInsights.model}
+            </span>
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-primary)' }}>
+            <div style={{ marginBottom: 12 }}>{aiInsights.summary}</div>
+            <div style={{ fontWeight: 600, marginBottom: 8, color: '#A78BFA' }}>Recommended Actions:</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {aiInsights.actions.map((action, i) => (
+                <li key={i} style={{ marginBottom: 4 }}>{action}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Simulation Controls */}
       <div className="card glow-blue mb-4">

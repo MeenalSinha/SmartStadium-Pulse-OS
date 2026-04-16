@@ -31,6 +31,7 @@ export const api = {
   getMetrics:         ()                       => apiFetch('/api/metrics'),
   getRecommendations: ()                       => apiFetch('/api/recommendations'),
   getCrowdStatus:     ()                       => apiFetch('/api/crowd-status'),
+  getAiInsights:      ()                       => apiFetch('/api/ai-insights'),
 
   getRoute: (from, to) => apiFetch('/api/route', {
     method: 'POST',
