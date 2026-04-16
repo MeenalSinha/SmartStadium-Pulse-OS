@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment secrets — NEVER commit these
+.env
+*/.env
+
+# SQLite database files — data is runtime state, not source code
+backend/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs/
+*.log
+
+# Build output
+frontend/build/
+
+# Coverage
+coverage/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
