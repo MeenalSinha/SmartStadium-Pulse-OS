@@ -168,11 +168,10 @@ Coverage targets: 70% lines / functions / statements, 60% branches.
 - **Admin auth** — constant-time key comparison on sensitive endpoints (timing-attack safe)
 - **Structured logging** — every request logged with unique ID; no secrets in logs
 
----
+cp .env.example .env # Ensure GOOGLE_CLOUD_PROJECT is set for Vertex AI
+npm run dev
 
-## Known Limitations (Paths to Scale)
-
-1. **Single process** — Socket.IO has no Redis adapter. Add `@socket.io/redis-adapter` + a Redis instance to support multiple Node.js processes behind a load balancer.
-2. **sql.js** — Pure-JS SQLite is ideal for single-instance deployments. For multi-node scale, replace `src/db/index.js` with a Postgres pool (`pg`) — the interface is identical.
-3. **No TypeScript** — Runtime type errors are possible. Incrementally adopt TypeScript starting with `src/config/index.js` and `src/middleware/validate.js`.
-4. **"AI" routing** — The recommendation and routing engine uses Dijkstra + density thresholds. It is rule-based, not ML. The label "AI-powered" in the UI refers to automated decision-making, not a neural network.
+# Frontend
+cd frontend
+npm start
+```
