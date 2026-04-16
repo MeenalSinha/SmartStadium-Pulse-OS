@@ -31,7 +31,20 @@ const corsOptions = {
 const io = new Server(server, { cors: corsOptions });
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+// Security headers — strict CSP for a JSON-only API server.
+// No HTML is served, so all content-type directives are restrictive.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:       ["'none'"],
+      frameAncestors:   ["'none'"],
+      formAction:       ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,  // Not applicable for an API
+  referrerPolicy:            { policy: 'no-referrer' },
+}));
+
 app.use(cors(corsOptions));
 
 // Request timeout — prevents slow/hung clients holding connections open indefinitely

@@ -263,7 +263,9 @@ describe('GET /api/metrics', () => {
     expect(m.waitTimeReduced).toBeLessThanOrEqual(99);
     expect(m.satisfactionScore).toBeGreaterThanOrEqual(1);
     expect(m.satisfactionScore).toBeLessThanOrEqual(5);
-    expect(m.routingImprovement).toBe(63);
+    // routingImprovement is now dynamically derived from live density (range 40–99)
+    expect(m.routingImprovement).toBeGreaterThanOrEqual(40);
+    expect(m.routingImprovement).toBeLessThanOrEqual(99);
     expect(typeof m.activeUsers).toBe('number');
     expect(typeof m.ordersProcessed).toBe('number');
   });
@@ -287,6 +289,56 @@ describe('POST /api/simulate', () => {
     expect((await request(app).post('/api/simulate').set('x-admin-key', 'test-secret').send({ mode: 'constructor' })).status).toBe(400));
   test('empty body → 400', async () =>
     expect((await request(app).post('/api/simulate').set('x-admin-key', 'test-secret').send({})).status).toBe(400));
+});
+
+// ─── /api/ai-insights ───────────────────────────────────────────────────────────────────────
+describe('GET /api/ai-insights', () => {
+  test('returns valid insights object with required fields', async () => {
+    const res = await request(app).get('/api/ai-insights');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('insights');
+    expect(res.body).toHaveProperty('timestamp');
+    const { insights } = res.body;
+    expect(typeof insights.summary).toBe('string');
+    expect(insights.summary.length).toBeGreaterThan(0);
+    expect(Array.isArray(insights.actions)).toBe(true);
+    expect(insights.actions.length).toBeGreaterThan(0);
+    expect(typeof insights.source).toBe('string');
+    // In test env (no GCP metadata), should fall back to rule-based engine
+    expect(['rule-based', 'vertex-ai']).toContain(insights.source);
+    expect(typeof insights.model).toBe('string');
+  });
+
+  test('summary is a non-trivial string (>10 chars)', async () => {
+    const res = await request(app).get('/api/ai-insights');
+    expect(res.body.insights.summary.length).toBeGreaterThan(10);
+  });
+
+  test('actions array contains non-empty strings', async () => {
+    const res = await request(app).get('/api/ai-insights');
+    res.body.insights.actions.forEach(a => {
+      expect(typeof a).toBe('string');
+      expect(a.length).toBeGreaterThan(0);
+    });
+  });
+
+  test('second call within cache window is marked cached', async () => {
+    // First call primes the cache
+    await request(app).get('/api/ai-insights');
+    // Second call within 30s TTL should be cached
+    const res = await request(app).get('/api/ai-insights');
+    expect(res.status).toBe(200);
+    // cached flag is set to true when returned from cache
+    expect(res.body.insights.cached).toBe(true);
+  });
+
+  test('timestamp is a recent Unix ms timestamp', async () => {
+    const before = Date.now();
+    const res    = await request(app).get('/api/ai-insights');
+    const after  = Date.now();
+    expect(res.body.timestamp).toBeGreaterThanOrEqual(before);
+    expect(res.body.timestamp).toBeLessThanOrEqual(after + 100);
+  });
 });
 
 // ─── 404 catch-all ───────────────────────────────────────────────────────────

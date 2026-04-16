@@ -1,5 +1,5 @@
 # Stage 1 — Build React app
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Accept the API URL at build time so it gets baked into the CRA bundle.
@@ -9,7 +9,7 @@ ARG REACT_APP_API_URL=http://localhost:3001
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 COPY . .
 RUN npm run build

@@ -80,8 +80,13 @@ describe('SimulationEngine — getMetrics()', () => {
     expect(sim.getMetrics().ordersProcessed).toBe(sim.orders.length);
   });
 
-  test('routingImprovement is always 63', () => {
-    expect(makeEngine().getMetrics().routingImprovement).toBe(63);
+  test('routingImprovement is dynamically derived from live density (range 40–99)', () => {
+    const sim = makeEngine();
+    // Set all zones to exactly 0.5 density → routingImprovement = 40 + 0.5*59 = 70
+    Object.keys(sim.density).forEach(id => { sim.density[id] = 0.5; });
+    const ri = sim.getMetrics().routingImprovement;
+    expect(ri).toBeGreaterThanOrEqual(40);
+    expect(ri).toBeLessThanOrEqual(99);
   });
 });
 

@@ -1,19 +1,21 @@
 'use strict';
 
-const express  = require('express');
+const express   = require('express');
 const { v4: uuidv4 } = require('uuid');
 const rateLimit = require('express-rate-limit');
 
 const { ZONES, STALLS, RATE, NODE_ENV } = require('../config');
-const sim = require('../services/simulation');
-const { dijkstra } = require('../services/pathfinding');
+const sim              = require('../services/simulation');
+const { dijkstra }     = require('../services/pathfinding');
+const { getInsights, invalidateCache } = require('../services/gemini');
 const { requireAdminKey } = require('../middleware/auth');
+const db               = require('../db');          // hoisted — avoids inline require()
 const {
   isValidZone, isValidStall, isValidMode,
   sanitizeItems, sanitizeUserId,
 } = require('../middleware/validate');
 const log        = require('../utils/logger');
-const catchAsync  = require('../middleware/catchAsync');
+const catchAsync = require('../middleware/catchAsync');
 
 const router = express.Router();
 
@@ -181,6 +183,17 @@ router.get('/recommendations', (_req, res) => {
   res.json({ recommendations: recs.slice(0, 4), timestamp: Date.now() });
 });
 
+// ─── AI Insights (Vertex AI — Gemini 1.5 Flash) ───────────────────────────────
+/**
+ * Returns AI-generated stadium operational insights.
+ * Backed by Vertex AI in Cloud Run; falls back to rule-based engine elsewhere.
+ * Results cached for 30 s to control API costs.
+ */
+router.get('/ai-insights', catchAsync(async (_req, res) => {
+  const insights = await getInsights(sim.density, sim.mode);
+  res.json({ insights, timestamp: Date.now() });
+}));
+
 // ─── Alerts ───────────────────────────────────────────────────────────────────
 router.get('/alerts', (_req, res) => {
   res.json({ alerts: sim.alerts.slice(0, 10), timestamp: Date.now() });
@@ -200,6 +213,7 @@ router.post('/simulate', simulateLimiter, requireAdminKey, catchAsync(async (req
     });
   }
   await sim.setMode(mode);
+  invalidateCache(); // Force fresh AI insights after mode change
   res.json({ success: true, mode });
 }));
 
@@ -222,16 +236,16 @@ router.post('/alert', catchAsync(async (req, res) => {
   }
 
   const alert = {
-    id:        require('uuid').v4(),
+    id:        uuidv4(),
     zone,
     zoneName:  ZONES[zone].name,
     type,
     message:   message.trim().slice(0, 200),
     timestamp: Date.now(),
-    source:    'staff',   // distinguishes manual from auto-generated
+    source:    'staff',   // distinguishes manual from auto-generated alerts
   };
 
-  // Inject into live sim state
+  // Merge into live alerts state (one per zone, most-recent wins)
   const alertMap = new Map();
   [alert, ...sim.alerts].forEach(a => {
     if (!alertMap.has(a.zone) || a.timestamp > alertMap.get(a.zone).timestamp) {
@@ -242,9 +256,7 @@ router.post('/alert', catchAsync(async (req, res) => {
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 20);
 
-  // Persist
-  const db = require('../db');
-  await db.insertAlert(alert);
+  await db.insertAlert(alert); // db hoisted at module top — no inline require
 
   log.info({ zone, type, source: 'staff' }, 'Manual staff alert sent');
   res.json({ success: true, alert });

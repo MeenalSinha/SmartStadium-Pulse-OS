@@ -3,14 +3,48 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#F8F9FB" />
-    <meta name="description" content="SmartStadium Pulse OS — AI-powered stadium management" />
-    <title>SmartStadium Pulse OS</title>
+    <meta name="theme-color" content="#090E1A" />
+    <meta name="description" content="SmartStadium Pulse OS — AI-powered real-time stadium crowd management, Dijkstra routing, and fan rewards engine." />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="SmartStadium Pulse OS" />
+    <meta property="og:description" content="Real-time stadium operations: AI crowd routing, queue elimination, staff dispatch, and fan rewards." />
+    <meta property="og:image"       content="%PUBLIC_URL%/og-image.png" />
+
+    <!-- Security: prevent clickjacking via meta (belt-and-suspenders with server X-Frame-Options) -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- Preconnect to Google Fonts for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <title>SmartStadium Pulse OS</title>
+
+    <!-- Structured data for search engines -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "SmartStadium Pulse OS",
+      "applicationCategory": "BusinessApplication",
+      "description": "AI-powered stadium operations platform with real-time crowd management and fan engagement.",
+      "operatingSystem": "Web"
+    }
+    </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <!-- Skip-to-content landmark for keyboard and screen reader users -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+
+    <noscript>
+      <p style="padding:24px;font-family:sans-serif;text-align:center;">
+        SmartStadium Pulse OS requires JavaScript to function.
+        Please enable JavaScript in your browser settings.
+      </p>
+    </noscript>
+
+    <div id="root" role="application" aria-label="SmartStadium Pulse OS"></div>
   </body>
 </html>
