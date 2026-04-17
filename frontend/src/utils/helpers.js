@@ -5,31 +5,34 @@
 
 /** @param {number} density 0–1 */
 export function getDensityLevel(density) {
-  if (density > 0.75) return 'critical';
-  if (density > 0.50) return 'high';
-  if (density > 0.25) return 'moderate';
-  return 'low';
+  if (density > 0.75) return "critical";
+  if (density > 0.5) return "high";
+  if (density > 0.25) return "moderate";
+  return "low";
 }
 
 /** @param {number} density 0–1 → hex color string */
 export function getDensityColor(density) {
-  if (density > 0.75) return '#E02424';
-  if (density > 0.50) return '#D03801';
-  if (density > 0.25) return '#C27803';
-  return '#0E9F6E';
+  if (density > 0.75) return "#E02424";
+  if (density > 0.5) return "#D03801";
+  if (density > 0.25) return "#C27803";
+  return "#0E9F6E";
 }
 
 /** @param {number} density 0–1 → rgba background string */
 export function getDensityBg(density) {
-  if (density > 0.75) return 'rgba(224,36,36,0.15)';
-  if (density > 0.50) return 'rgba(208,56,1,0.13)';
-  if (density > 0.25) return 'rgba(194,120,3,0.12)';
-  return 'rgba(14,159,110,0.12)';
+  if (density > 0.75) return "rgba(224,36,36,0.15)";
+  if (density > 0.5) return "rgba(208,56,1,0.13)";
+  if (density > 0.25) return "rgba(194,120,3,0.12)";
+  return "rgba(14,159,110,0.12)";
 }
 
 /** @param {number} ms Unix timestamp → "HH:MM" */
 export function formatTime(ms) {
-  return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(ms).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /** @param {number} ms Unix timestamp → "Xs ago" or "Xm ago" */
@@ -64,10 +67,13 @@ export function clampDensity(value) {
  */
 export function formatModeLabel(mode) {
   const LABELS = {
-    normal:    'Normal',
-    pre_match: 'Pre-Match',
-    halftime:  'Half-Time',
-    exit_rush: 'Exit Rush',
+    normal: "Normal",
+    pre_match: "Pre-Match",
+    halftime: "Half-Time",
+    exit_rush: "Exit Rush",
   };
-  return LABELS[mode] ?? mode.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return (
+    LABELS[mode] ??
+    mode.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
 }

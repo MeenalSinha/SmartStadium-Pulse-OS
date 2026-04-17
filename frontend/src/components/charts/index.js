@@ -23,4 +23,4 @@ export {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
+} from "recharts";

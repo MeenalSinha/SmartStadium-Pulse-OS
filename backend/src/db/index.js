@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const fs   = require('fs');
-const path = require('path');
-const initSqlJs = require('sql.js');
-const log  = require('../utils/logger');
-const { DB_PATH } = require('../config');
+const fs = require("fs");
+const path = require("path");
+const initSqlJs = require("sql.js");
+const log = require("../utils/logger");
+const { DB_PATH } = require("../config");
 
 // Singleton promise — prevents double-initialisation under concurrent calls
 let _dbPromise = null;
@@ -18,7 +18,7 @@ async function getDb() {
 async function _init() {
   const SQL = await initSqlJs();
 
-  const useFile = DB_PATH !== ':memory:';
+  const useFile = DB_PATH !== ":memory:";
   if (useFile) {
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -35,18 +35,22 @@ async function _init() {
   if (useFile) {
     // Async auto-save: write to a temp file then rename (atomic write, non-blocking)
     db._autoSave = () => {
-      const data   = db.export();
-      const tmp    = DB_PATH + '.tmp';
-      fs.writeFile(tmp, Buffer.from(data), err => {
-        if (err) { log.warn({ err: err.message }, 'DB auto-save write failed'); return; }
-        fs.rename(tmp, DB_PATH, renameErr => {
-          if (renameErr) log.warn({ err: renameErr.message }, 'DB auto-save rename failed');
+      const data = db.export();
+      const tmp = DB_PATH + ".tmp";
+      fs.writeFile(tmp, Buffer.from(data), (err) => {
+        if (err) {
+          log.warn({ err: err.message }, "DB auto-save write failed");
+          return;
+        }
+        fs.rename(tmp, DB_PATH, (renameErr) => {
+          if (renameErr)
+            log.warn({ err: renameErr.message }, "DB auto-save rename failed");
         });
       });
     };
   }
 
-  log.info({ dbPath: useFile ? DB_PATH : ':memory:' }, 'Database initialised');
+  log.info({ dbPath: useFile ? DB_PATH : ":memory:" }, "Database initialised");
   return db;
 }
 
@@ -90,9 +94,13 @@ function _migrate(db) {
     )
   `);
 
-  db.run(`CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC)`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC)`,
+  );
   db.run(`CREATE INDEX IF NOT EXISTS idx_orders_user    ON orders(user_id)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at DESC)`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at DESC)`,
+  );
 }
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
@@ -103,28 +111,38 @@ async function insertOrder(order) {
        (id,stall_id,stall_name,zone,items,user_id,status,wait_time,ready_at,points,created_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     [
-      order.id, order.stallId, order.stallName, order.zone,
-      JSON.stringify(order.items), order.userId, order.status,
-      order.waitTime, order.readyAt, order.pointsEarned, order.timestamp,
-    ]
+      order.id,
+      order.stallId,
+      order.stallName,
+      order.zone,
+      JSON.stringify(order.items),
+      order.userId,
+      order.status,
+      order.waitTime,
+      order.readyAt,
+      order.pointsEarned,
+      order.timestamp,
+    ],
   );
   if (db._autoSave) db._autoSave();
 }
 
 async function getRecentOrders(limit = 50) {
-  const db  = await getDb();
-  const res = db.exec(`SELECT * FROM orders ORDER BY created_at DESC LIMIT ?`, [limit]);
+  const db = await getDb();
+  const res = db.exec(`SELECT * FROM orders ORDER BY created_at DESC LIMIT ?`, [
+    limit,
+  ]);
   if (!res.length) return [];
   const { columns, values } = res[0];
-  return values.map(row => {
-    const obj  = Object.fromEntries(columns.map((c, i) => [c, row[i]]));
-    obj.items  = JSON.parse(obj.items);
+  return values.map((row) => {
+    const obj = Object.fromEntries(columns.map((c, i) => [c, row[i]]));
+    obj.items = JSON.parse(obj.items);
     return obj;
   });
 }
 
 async function countOrders() {
-  const db  = await getDb();
+  const db = await getDb();
   const res = db.exec(`SELECT COUNT(*) as cnt FROM orders`);
   return res[0]?.values[0][0] ?? 0;
 }
@@ -135,40 +153,57 @@ async function insertAlert(alert) {
   db.run(
     `INSERT OR REPLACE INTO alerts (id,zone,zone_name,type,message,created_at)
      VALUES (?,?,?,?,?,?)`,
-    [alert.id, alert.zone, alert.zoneName, alert.type, alert.message, alert.timestamp]
+    [
+      alert.id,
+      alert.zone,
+      alert.zoneName,
+      alert.type,
+      alert.message,
+      alert.timestamp,
+    ],
   );
   db.run(
     `DELETE FROM alerts
-     WHERE id NOT IN (SELECT id FROM alerts ORDER BY created_at DESC LIMIT 100)`
+     WHERE id NOT IN (SELECT id FROM alerts ORDER BY created_at DESC LIMIT 100)`,
   );
   if (db._autoSave) db._autoSave();
 }
 
 async function getRecentAlerts(limit = 20) {
-  const db  = await getDb();
-  const res = db.exec(`SELECT * FROM alerts ORDER BY created_at DESC LIMIT ?`, [limit]);
+  const db = await getDb();
+  const res = db.exec(`SELECT * FROM alerts ORDER BY created_at DESC LIMIT ?`, [
+    limit,
+  ]);
   if (!res.length) return [];
   const { columns, values } = res[0];
-  return values.map(row => Object.fromEntries(columns.map((c, i) => [c, row[i]])));
+  return values.map((row) =>
+    Object.fromEntries(columns.map((c, i) => [c, row[i]])),
+  );
 }
 
 // ─── Sim state ────────────────────────────────────────────────────────────────
 async function saveSimMode(mode) {
   const db = await getDb();
-  db.run(`INSERT OR REPLACE INTO sim_state (key, value) VALUES ('mode', ?)`, [mode]);
+  db.run(`INSERT OR REPLACE INTO sim_state (key, value) VALUES ('mode', ?)`, [
+    mode,
+  ]);
   if (db._autoSave) db._autoSave();
 }
 
 async function loadSimMode() {
-  const db  = await getDb();
+  const db = await getDb();
   const res = db.exec(`SELECT value FROM sim_state WHERE key='mode'`);
-  return res[0]?.values[0][0] ?? 'normal';
+  return res[0]?.values[0][0] ?? "normal";
 }
 
 module.exports = {
   getDb,
-  insertOrder, getRecentOrders, countOrders,
-  insertAlert, getRecentAlerts,
-  saveSimMode, loadSimMode,
+  insertOrder,
+  getRecentOrders,
+  countOrders,
+  insertAlert,
+  getRecentAlerts,
+  saveSimMode,
+  loadSimMode,
   _resetForTesting,
 };

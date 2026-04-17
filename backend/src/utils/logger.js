@@ -1,9 +1,9 @@
-'use strict';
+"use strict";
 
-const pino = require('pino');
-const { NODE_ENV } = require('../config');
+const pino = require("pino");
+const { NODE_ENV } = require("../config");
 
-const isTest = NODE_ENV === 'test' || process.env.LOG_LEVEL === 'silent';
+const isTest = NODE_ENV === "test" || process.env.LOG_LEVEL === "silent";
 
 /**
  * Structured logger — pino.
@@ -15,13 +15,15 @@ const isTest = NODE_ENV === 'test' || process.env.LOG_LEVEL === 'silent';
  * Every HTTP request is automatically logged with a unique req.id by pino-http.
  */
 const log = pino({
-  level: isTest ? 'silent' : (process.env.LOG_LEVEL || 'info'),
+  level: isTest ? "silent" : process.env.LOG_LEVEL || "info",
   // No transport worker threads — write directly to stdout
   // Run `node server.js | pino-pretty` in dev for human-readable output
   formatters: {
-    level(label) { return { level: label }; },
+    level(label) {
+      return { level: label };
+    },
   },
-  base: { service: 'smartstadium-backend', env: NODE_ENV },
+  base: { service: "smartstadium-backend", env: NODE_ENV },
   timestamp: pino.stdTimeFunctions.isoTime,
 });
 

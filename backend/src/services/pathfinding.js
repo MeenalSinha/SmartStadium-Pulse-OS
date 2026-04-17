@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const { ZONES } = require('../config');
+const { ZONES } = require("../config");
 
 /**
  * dijkstra(start, end, densityMap)
@@ -22,18 +22,22 @@ function dijkstra(start, end, densityMap) {
     return { path: [start], cost: 0, estimatedMinutes: 0 };
   }
 
-  const dist    = {};
-  const prev    = {};
+  const dist = {};
+  const prev = {};
   const visited = new Set();
-  const queue   = new Set(Object.keys(ZONES));
+  const queue = new Set(Object.keys(ZONES));
 
-  Object.keys(ZONES).forEach(id => { dist[id] = Infinity; });
+  Object.keys(ZONES).forEach((id) => {
+    dist[id] = Infinity;
+  });
   dist[start] = 0;
 
   while (queue.size > 0) {
     // Find unvisited node with minimum distance (O(V) scan — fine at 8 nodes)
     let u = null;
-    queue.forEach(id => { if (u === null || dist[id] < dist[u]) u = id; });
+    queue.forEach((id) => {
+      if (u === null || dist[id] < dist[u]) u = id;
+    });
 
     if (dist[u] === Infinity) break; // remaining nodes unreachable
     if (u === end) break;
@@ -41,11 +45,11 @@ function dijkstra(start, end, densityMap) {
     queue.delete(u);
     visited.add(u);
 
-    ZONES[u].connections.forEach(v => {
+    ZONES[u].connections.forEach((v) => {
       if (visited.has(v)) return;
-      const density  = densityMap[v] || 0;
+      const density = densityMap[v] || 0;
       const edgeCost = 1 + density * 3;
-      const alt      = dist[u] + edgeCost;
+      const alt = dist[u] + edgeCost;
       if (alt < dist[v]) {
         dist[v] = alt;
         prev[v] = u;
@@ -59,7 +63,10 @@ function dijkstra(start, end, densityMap) {
 
   const path = [];
   let cur = end;
-  while (cur !== undefined) { path.unshift(cur); cur = prev[cur]; }
+  while (cur !== undefined) {
+    path.unshift(cur);
+    cur = prev[cur];
+  }
 
   return {
     path,

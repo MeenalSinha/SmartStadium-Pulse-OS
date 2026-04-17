@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { api } from '../services/api';
+import { useEffect, useState, useCallback } from "react";
+import { api } from "../services/api";
 
 /**
  * useRecommendations — shared hook for polling /api/recommendations.
@@ -20,14 +20,15 @@ export function useRecommendations(intervalMs = 4000) {
   const [error, setError] = useState(null);
 
   const fetch = useCallback(() => {
-    api.getRecommendations()
-      .then(d => {
+    api
+      .getRecommendations()
+      .then((d) => {
         setRecommendations(d.recommendations || []);
         setLoading(false);
         setError(null);
       })
-      .catch(err => {
-        setError(err.message || 'Failed to load recommendations');
+      .catch((err) => {
+        setError(err.message || "Failed to load recommendations");
         setLoading(false);
       });
   }, []);

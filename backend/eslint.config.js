@@ -2,10 +2,10 @@ module.exports = [
   {
     rules: {
       "no-unused-vars": "warn",
-      "no-undef": "error"
+      "no-undef": "error",
     },
     languageOptions: {
-      ecmaVersion: 'latest',
+      ecmaVersion: "latest",
       sourceType: "commonjs",
       globals: {
         require: true,
@@ -22,8 +22,8 @@ module.exports = [
         Object: true,
         Date: true,
         AbortSignal: true,
-        Buffer: true
-      }
-    }
-  }
+        Buffer: true,
+      },
+    },
+  },
 ];

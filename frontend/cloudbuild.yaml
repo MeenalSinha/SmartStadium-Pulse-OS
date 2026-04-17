@@ -1,5 +1,13 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'us-central1-docker.pkg.dev/smartstadium-pulse-os/smartstadium/frontend', '--build-arg', 'REACT_APP_API_URL=$_API_URL', '.']
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "us-central1-docker.pkg.dev/smartstadium-pulse-os/smartstadium/frontend",
+        "--build-arg",
+        "REACT_APP_API_URL=$_API_URL",
+        ".",
+      ]
 images:
-- 'us-central1-docker.pkg.dev/smartstadium-pulse-os/smartstadium/frontend'
+  - "us-central1-docker.pkg.dev/smartstadium-pulse-os/smartstadium/frontend"

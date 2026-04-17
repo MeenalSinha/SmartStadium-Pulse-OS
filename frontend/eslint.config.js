@@ -3,13 +3,13 @@ module.exports = [
     rules: {
       "no-unused-vars": "warn",
       "no-undef": "error",
-      "react-hooks/exhaustive-deps": "off"
+      "react-hooks/exhaustive-deps": "off",
     },
     languageOptions: {
-      ecmaVersion: 'latest',
+      ecmaVersion: "latest",
       sourceType: "module",
       parserOptions: {
-        ecmaFeatures: { jsx: true }
+        ecmaFeatures: { jsx: true },
       },
       globals: {
         window: true,
@@ -26,8 +26,8 @@ module.exports = [
         Date: true,
         process: true,
         requestAnimationFrame: true,
-        cancelAnimationFrame: true
-      }
-    }
-  }
+        cancelAnimationFrame: true,
+      },
+    },
+  },
 ];
