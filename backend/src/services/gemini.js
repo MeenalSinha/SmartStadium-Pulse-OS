@@ -23,27 +23,27 @@ const CACHE_TTL_MS = 30_000; // 30-second cache — balances freshness with API 
 /** @type {{ insights: object|null, generatedAt: number }} */
 let _cache = { insights: null, generatedAt: 0 };
 
-// ─── GCP Authentication ───────────────────────────────────────────────────────
+const { VertexAI, HarmCategory, HarmBlockThreshold } = require('@google-cloud/vertexai');
 
-/**
- * Retrieve a short-lived OAuth2 access token from the GCE metadata server.
- * This is the correct, credential-free way to authenticate in Cloud Run.
- *
- * @returns {Promise<string>} A valid Bearer token
- * @throws {Error} If the metadata server is unreachable (non-GCP env)
- */
-async function getAccessToken() {
-  const res = await fetch(
-    'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
-    {
-      headers: { 'Metadata-Flavor': 'Google' },
-      signal:  AbortSignal.timeout(3000),
-    }
-  );
-  if (!res.ok) throw new Error(`Metadata server returned HTTP ${res.status}`);
-  const data = await res.json();
-  return data.access_token;
-}
+// ─── Vertex AI SDK Setup ──────────────────────────────────────────────────────
+const vertexAI = PROJECT_ID 
+  ? new VertexAI({ project: PROJECT_ID, location: LOCATION }) 
+  : null;
+
+const generativeModel = vertexAI 
+  ? vertexAI.getGenerativeModel({
+      model: MODEL,
+      generationConfig: {
+        maxOutputTokens: 300,
+        temperature: 0.3,
+        topP: 0.95,
+      },
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+      ],
+    })
+  : null;
 
 // ─── Vertex AI API Call ───────────────────────────────────────────────────────
 
@@ -55,45 +55,21 @@ async function getAccessToken() {
  * @throws {Error} On auth failure, network error, or non-2xx API response
  */
 async function callGemini(prompt) {
-  if (!PROJECT_ID) throw new Error('GOOGLE_CLOUD_PROJECT env var not set — cannot reach Vertex AI');
-
-  const token = await getAccessToken();
-  const url   = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent`;
-
-  const requestBody = {
-    contents: [
-      { role: 'user', parts: [{ text: prompt }] },
-    ],
-    generationConfig: {
-      maxOutputTokens: 300,
-      temperature:     0.3,   // low temperature → factual, predictable outputs
-      topP:            0.95,
-    },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_ONLY_HIGH' },
-    ],
-  };
-
-  const res = await fetch(url, {
-    method:  'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type':  'application/json',
-      'User-Agent':    'SmartStadium-Pulse-OS/1.2',
-    },
-    body:   JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Vertex AI HTTP ${res.status}: ${errText.slice(0, 200)}`);
+  if (!generativeModel) {
+    throw new Error('GOOGLE_CLOUD_PROJECT env var not set — Vertex AI SDK not initialized');
   }
 
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Vertex AI returned an empty response');
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  };
+
+  const result = await generativeModel.generateContent(request);
+  const text = result?.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+  
+  if (!text) {
+    throw new Error('Vertex AI SDK returned an empty response or was blocked by safety settings');
+  }
+
   return text;
 }
 
