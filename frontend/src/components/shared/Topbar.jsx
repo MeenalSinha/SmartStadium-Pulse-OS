@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import { formatModeLabel } from "../../utils/helpers";
 
 const PAGE_META = {
@@ -121,3 +122,18 @@ export default function Topbar({ pathname, connected, points, mode }) {
     </header>
   );
 }
+
+Topbar.propTypes = {
+  /** Current route pathname (e.g. '/admin/heatmap'). */
+  pathname: PropTypes.string.isRequired,
+  /** Whether the WebSocket connection is active. */
+  connected: PropTypes.bool.isRequired,
+  /** Accumulated fan reward points. */
+  points: PropTypes.number,
+  /** Current simulation mode string. */
+  mode: PropTypes.string.isRequired,
+};
+
+Topbar.defaultProps = {
+  points: 0,
+};

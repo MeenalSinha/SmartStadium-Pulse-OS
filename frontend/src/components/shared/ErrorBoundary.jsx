@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 /**
  * ErrorBoundary — catches uncaught render/lifecycle errors in the component tree.
@@ -106,3 +107,10 @@ export default class ErrorBoundary extends React.Component {
     );
   }
 }
+
+ErrorBoundary.propTypes = {
+  /** The component tree to protect. */
+  children: PropTypes.node.isRequired,
+  /** Optional custom fallback UI to render on error. */
+  fallback: PropTypes.node,
+};

@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import { useNavigate, useLocation } from "react-router-dom";
 import { formatModeLabel } from "../../utils/helpers";
 
@@ -32,7 +33,7 @@ export default function Sidebar({ connected, mode }) {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <h1>SmartStadium</h1>
-        <span>Pulse OS v1.1</span>
+        <span>Pulse OS v1.3</span>
       </div>
 
       <div
@@ -106,6 +107,14 @@ export default function Sidebar({ connected, mode }) {
   );
 }
 
+Sidebar.propTypes = {
+  /** Whether the WebSocket is connected. */
+  connected: PropTypes.bool.isRequired,
+  /** Current simulation mode string. */
+  mode: PropTypes.string.isRequired,
+};
+
+/** @param {{ size: number }} props */
 function GridIcon({ size = 16 }) {
   return (
     <svg
@@ -243,3 +252,15 @@ function StarIcon({ size = 16 }) {
     </svg>
   );
 }
+
+// Shared PropTypes for all icon sub-components
+const iconPropTypes = { size: PropTypes.number };
+GridIcon.propTypes = iconPropTypes;
+MapIcon.propTypes = iconPropTypes;
+BellIcon.propTypes = iconPropTypes;
+ChartIcon.propTypes = iconPropTypes;
+UsersIcon.propTypes = iconPropTypes;
+PhoneIcon.propTypes = iconPropTypes;
+NavIcon.propTypes = iconPropTypes;
+BagIcon.propTypes = iconPropTypes;
+StarIcon.propTypes = iconPropTypes;

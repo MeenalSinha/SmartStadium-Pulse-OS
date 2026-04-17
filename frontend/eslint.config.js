@@ -1,7 +1,7 @@
 module.exports = [
   {
     rules: {
-      "no-unused-vars": "warn",
+      "no-unused-vars": ["warn", { "varsIgnorePattern": "^React$|^App$|^ErrorBoundary$" }],
       "no-undef": "error",
       "react-hooks/exhaustive-deps": "off",
     },

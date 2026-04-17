@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import {
   getDensityColor,
   getDensityBg,
@@ -297,3 +298,16 @@ export default function StadiumMap({
     </svg>
   );
 }
+
+StadiumMap.propTypes = {
+  /** Zone ID → density (0–1) map. */
+  density: PropTypes.objectOf(PropTypes.number),
+  /** Ordered list of zone IDs forming the highlighted path. */
+  path: PropTypes.arrayOf(PropTypes.string),
+  /** Currently selected/active zone ID. */
+  selectedZone: PropTypes.string,
+  /** Called with the zone ID when the user clicks a zone. */
+  onZoneClick: PropTypes.func,
+  /** Renders a smaller map when true. */
+  compact: PropTypes.bool,
+};
