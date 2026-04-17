@@ -18,8 +18,11 @@
 const log = require("./logger");
 
 const PROJECT_ID =
-  process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || null;
-const IS_GCP = !!PROJECT_ID;
+  process.env.GOOGLE_CLOUD_PROJECT ||
+  process.env.GCLOUD_PROJECT ||
+  process.env.GCP_PROJECT ||
+  null;
+const IS_GCP = !!(PROJECT_ID || process.env.K_SERVICE || process.env.FUNCTION_NAME);
 
 // ─── Cloud Error Reporting ────────────────────────────────────────────────────
 
