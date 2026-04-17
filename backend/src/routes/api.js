@@ -20,6 +20,7 @@ const {
 } = require("../middleware/validate");
 const log = require("../utils/logger");
 const catchAsync = require("../middleware/catchAsync");
+const { GCP_SERVICES } = require("../utils/gcp");
 
 const router = express.Router();
 
@@ -60,6 +61,7 @@ router.get("/health", (_req, res) => {
     connectedClients: sim.connectedClients,
     ordersStored: sim.orders.length,
     alertsStored: sim.alerts.length,
+    gcpServices: GCP_SERVICES,
   });
 });
 
