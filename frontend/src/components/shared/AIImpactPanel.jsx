@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import PropTypes from "prop-types";
 
 /**
  * AIImpactPanel — the "WOW moment" component.
@@ -277,18 +276,3 @@ export default function AIImpactPanel({ metrics, mode, density }) {
     </div>
   );
 }
-
-AIImpactPanel.propTypes = {
-  /** Live metrics object from the simulation engine. */
-  metrics: PropTypes.shape({
-    congestionReduced: PropTypes.number,
-    waitTimeReduced: PropTypes.number,
-    avgDensity: PropTypes.number,
-    ordersProcessed: PropTypes.number,
-    activeUsers: PropTypes.number,
-  }),
-  /** Current simulation mode string. */
-  mode: PropTypes.string.isRequired,
-  /** Zone ID → density (0–1) map. */
-  density: PropTypes.objectOf(PropTypes.number),
-};

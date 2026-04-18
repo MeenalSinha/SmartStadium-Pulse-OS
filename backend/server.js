@@ -16,7 +16,6 @@ const { PORT, ALLOWED_ORIGINS, RATE } = require("./src/config");
 const log = require("./src/utils/logger");
 const sim = require("./src/services/simulation");
 const apiRouter = require("./src/routes/api");
-const { reportError, getSecret } = require("./src/utils/gcp");
 
 // ─── App + server setup ──────────────────────────────────────────────────────
 const app = express();
@@ -122,8 +121,6 @@ app.use((err, req, res, _next) => {
   if (err.message?.includes("CORS")) {
     return res.status(403).json({ error: "CORS policy violation." });
   }
-  // Report 5xx errors to Google Cloud Error Reporting
-  reportError(err, req);
   log.error({ err: err.message, path: req.path }, "Unhandled request error");
   res.status(500).json({ error: "Internal server error." });
 });
@@ -188,18 +185,6 @@ process.on("uncaughtException", (err) => {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 async function boot() {
-  // Attempt to load ADMIN_API_KEY from Google Secret Manager.
-  // Falls back to the ADMIN_API_KEY environment variable if unavailable.
-  const secretKey = await getSecret(
-    "ADMIN_API_KEY",
-    process.env.ADMIN_API_KEY || "",
-  );
-  if (secretKey) {
-    // Inject the resolved key back into config so auth middleware uses it
-    const config = require("./src/config");
-    config.ADMIN_API_KEY = secretKey;
-  }
-
   await sim.init();
   server.listen(PORT, () => {
     log.info(

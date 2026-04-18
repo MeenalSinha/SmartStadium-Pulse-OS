@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-import PropTypes from "prop-types";
 
 // FIX: cap the seen-IDs set so it doesn't grow unbounded on long sessions
 const MAX_SEEN = 200;
@@ -130,17 +129,3 @@ export default function NotificationsPanel({ alerts = [] }) {
     </div>
   );
 }
-
-NotificationsPanel.propTypes = {
-  /** Array of live alert objects from the simulation engine. */
-  alerts: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      zone: PropTypes.string,
-      zoneName: PropTypes.string,
-      type: PropTypes.oneOf(["warning", "critical", "info"]),
-      message: PropTypes.string.isRequired,
-      timestamp: PropTypes.number,
-    }),
-  ),
-};

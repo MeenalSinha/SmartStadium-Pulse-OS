@@ -20,7 +20,6 @@ const {
 } = require("../middleware/validate");
 const log = require("../utils/logger");
 const catchAsync = require("../middleware/catchAsync");
-const { GCP_SERVICES } = require("../utils/gcp");
 
 const router = express.Router();
 
@@ -61,7 +60,6 @@ router.get("/health", (_req, res) => {
     connectedClients: sim.connectedClients,
     ordersStored: sim.orders.length,
     alertsStored: sim.alerts.length,
-    gcpServices: GCP_SERVICES,
   });
 });
 
@@ -168,9 +166,11 @@ router.post(
     }
     const sanitized = sanitizeItems(items);
     if (!sanitized) {
-      return res.status(400).json({
-        error: "Items must be a non-empty array of up to 20 strings.",
-      });
+      return res
+        .status(400)
+        .json({
+          error: "Items must be a non-empty array of up to 20 strings.",
+        });
     }
     const stall = STALLS.find((s) => s.id === stallId);
     const zoneDensity = sim.density[stall.zone] || 0;
@@ -233,7 +233,7 @@ router.get("/recommendations", (_req, res) => {
   res.json({ recommendations: recs.slice(0, 4), timestamp: Date.now() });
 });
 
-// ─── AI Insights (Vertex AI — Gemini 2.5 Flash) ───────────────────────────────
+// ─── AI Insights (Vertex AI — Gemini 1.5 Flash) ───────────────────────────────
 /**
  * Returns AI-generated stadium operational insights.
  * Backed by Vertex AI in Cloud Run; falls back to rule-based engine elsewhere.

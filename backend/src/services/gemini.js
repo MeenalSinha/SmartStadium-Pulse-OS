@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 /**
  * @module gemini
@@ -13,48 +13,37 @@
  * every fan-facing poll — critical for cost-efficiency at scale.
  */
 
-const log = require("../utils/logger");
+const log = require('../utils/logger');
 
-const PROJECT_ID =
-  process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || null;
-const LOCATION = process.env.VERTEX_LOCATION || "us-central1";
-const MODEL = "gemini-2.5-flash";
+const PROJECT_ID   = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || null;
+const LOCATION     = process.env.VERTEX_LOCATION || 'us-central1';
+const MODEL        = 'gemini-2.5-flash';
 const CACHE_TTL_MS = 30_000; // 30-second cache — balances freshness with API cost
 
 /** @type {{ insights: object|null, generatedAt: number }} */
 let _cache = { insights: null, generatedAt: 0 };
 
-const {
-  VertexAI,
-  HarmCategory,
-  HarmBlockThreshold,
-} = require("@google-cloud/vertexai");
+// ─── GCP Authentication ───────────────────────────────────────────────────────
 
-// ─── Vertex AI SDK Setup ──────────────────────────────────────────────────────
-const vertexAI = PROJECT_ID
-  ? new VertexAI({ project: PROJECT_ID, location: LOCATION })
-  : null;
-
-const generativeModel = vertexAI
-  ? vertexAI.getGenerativeModel({
-      model: MODEL,
-      generationConfig: {
-        maxOutputTokens: 300,
-        temperature: 0.3,
-        topP: 0.95,
-      },
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-      ],
-    })
-  : null;
+/**
+ * Retrieve a short-lived OAuth2 access token from the GCE metadata server.
+ * This is the correct, credential-free way to authenticate in Cloud Run.
+ *
+ * @returns {Promise<string>} A valid Bearer token
+ * @throws {Error} If the metadata server is unreachable (non-GCP env)
+ */
+async function getAccessToken() {
+  const res = await fetch(
+    'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
+    {
+      headers: { 'Metadata-Flavor': 'Google' },
+      signal:  AbortSignal.timeout(3000),
+    }
+  );
+  if (!res.ok) throw new Error(`Metadata server returned HTTP ${res.status}`);
+  const data = await res.json();
+  return data.access_token;
+}
 
 // ─── Vertex AI API Call ───────────────────────────────────────────────────────
 
@@ -66,25 +55,45 @@ const generativeModel = vertexAI
  * @throws {Error} On auth failure, network error, or non-2xx API response
  */
 async function callGemini(prompt) {
-  if (!generativeModel) {
-    throw new Error(
-      "GOOGLE_CLOUD_PROJECT env var not set — Vertex AI SDK not initialized",
-    );
-  }
+  if (!PROJECT_ID) throw new Error('GOOGLE_CLOUD_PROJECT env var not set — cannot reach Vertex AI');
 
-  const request = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  const token = await getAccessToken();
+  const url   = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent`;
+
+  const requestBody = {
+    contents: [
+      { role: 'user', parts: [{ text: prompt }] },
+    ],
+    generationConfig: {
+      maxOutputTokens: 300,
+      temperature:     0.3,   // low temperature → factual, predictable outputs
+      topP:            0.95,
+    },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_ONLY_HIGH' },
+    ],
   };
 
-  const result = await generativeModel.generateContent(request);
-  const text = result?.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type':  'application/json',
+      'User-Agent':    'SmartStadium-Pulse-OS/1.2',
+    },
+    body:   JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(10_000),
+  });
 
-  if (!text) {
-    throw new Error(
-      "Vertex AI SDK returned an empty response or was blocked by safety settings",
-    );
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Vertex AI HTTP ${res.status}: ${errText.slice(0, 200)}`);
   }
 
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Vertex AI returned an empty response');
   return text;
 }
 
@@ -100,19 +109,19 @@ async function callGemini(prompt) {
  * @returns {{ summary: string, actions: string[], source: string, model: string }}
  */
 function ruleBasedInsights(densityMap, mode) {
-  const entries = Object.entries(densityMap);
-  const avg = entries.reduce((s, [, d]) => s + d, 0) / entries.length;
+  const entries  = Object.entries(densityMap);
+  const avg      = entries.reduce((s, [, d]) => s + d, 0) / entries.length;
   const critical = entries.filter(([, d]) => d > 0.75).map(([id]) => id);
-  const quiet = entries.filter(([, d]) => d < 0.35).map(([id]) => id);
+  const quiet    = entries.filter(([, d]) => d < 0.35).map(([id]) => id);
 
   const modeLabels = {
-    normal: "normal operations",
-    pre_match: "pre-match build-up",
-    halftime: "halftime surge",
-    exit_rush: "exit rush",
+    normal:    'normal operations',
+    pre_match: 'pre-match build-up',
+    halftime:  'halftime surge',
+    exit_rush: 'exit rush',
   };
   const modeLabel = modeLabels[mode] || mode;
-  const avgPct = Math.round(avg * 100);
+  const avgPct    = Math.round(avg * 100);
 
   let summary;
   if (avg > 0.65) {
@@ -125,19 +134,13 @@ function ruleBasedInsights(densityMap, mode) {
 
   const actions = [];
   if (critical.length > 0)
-    actions.push(
-      `Deploy additional stewards to high-density zones: ${critical.join(", ")}.`,
-    );
+    actions.push(`Deploy additional stewards to high-density zones: ${critical.join(', ')}.`);
   if (quiet.length > 0)
-    actions.push(
-      `Encourage crowd redistribution toward low-density zones: ${quiet.join(", ")}.`,
-    );
+    actions.push(`Encourage crowd redistribution toward low-density zones: ${quiet.join(', ')}.`);
   if (actions.length === 0)
-    actions.push(
-      "Continue normal operations. All zones within acceptable thresholds.",
-    );
+    actions.push('Continue normal operations. All zones within acceptable thresholds.');
 
-  return { summary, actions, source: "rule-based", model: "fallback" };
+  return { summary, actions, source: 'rule-based', model: 'fallback' };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -157,84 +160,71 @@ async function getInsights(densityMap, mode) {
   const now = Date.now();
 
   // Return cached result if still fresh
-  if (_cache.insights && now - _cache.generatedAt < CACHE_TTL_MS) {
+  if (_cache.insights && (now - _cache.generatedAt) < CACHE_TTL_MS) {
     return { ..._cache.insights, cached: true };
   }
 
   const entries = Object.entries(densityMap);
-  const avg = entries.reduce((s, [, d]) => s + d, 0) / entries.length;
+  const avg     = entries.reduce((s, [, d]) => s + d, 0) / entries.length;
   const topZones = entries
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([id, d]) => `Zone ${id} (${Math.round(d * 100)}%)`)
-    .join(", ");
+    .join(', ');
   const quietZones = entries
     .sort(([, a], [, b]) => a - b)
     .slice(0, 2)
     .map(([id, d]) => `Zone ${id} (${Math.round(d * 100)}%)`)
-    .join(", ");
+    .join(', ');
 
   const modeLabels = {
-    normal: "Normal Operations",
-    pre_match: "Pre-Match (gates open)",
-    halftime: "Halftime (concourse surge)",
-    exit_rush: "Exit Rush",
+    normal: 'Normal Operations', pre_match: 'Pre-Match (gates open)',
+    halftime: 'Halftime (concourse surge)', exit_rush: 'Exit Rush',
   };
 
   const prompt = [
-    "You are an expert AI operations analyst for SmartStadium Pulse OS, a real-time crowd management platform.",
-    "",
+    'You are an expert AI operations analyst for SmartStadium Pulse OS, a real-time crowd management platform.',
+    '',
     `Current stadium state:`,
     `- Phase: ${modeLabels[mode] || mode}`,
     `- Average occupancy: ${Math.round(avg * 100)}%`,
     `- Busiest zones: ${topZones}`,
     `- Quietest zones: ${quietZones}`,
-    "",
-    "Provide exactly 2 items:",
-    "1. A single, authoritative operational summary sentence (max 30 words) describing current crowd conditions.",
-    "2. One specific, actionable staff recommendation starting with a verb (max 20 words).",
-    "",
-    "Format your response as:",
-    "SUMMARY: <your summary>",
-    "ACTION: <your recommendation>",
-  ].join("\n");
+    '',
+    'Provide exactly 2 items:',
+    '1. A single, authoritative operational summary sentence (max 30 words) describing current crowd conditions.',
+    '2. One specific, actionable staff recommendation starting with a verb (max 20 words).',
+    '',
+    'Format your response as:',
+    'SUMMARY: <your summary>',
+    'ACTION: <your recommendation>',
+  ].join('\n');
 
   try {
     const rawText = await callGemini(prompt);
 
     // Parse structured response
     const summaryMatch = rawText.match(/SUMMARY:\s*(.+?)(?=ACTION:|$)/is);
-    const actionMatch = rawText.match(/ACTION:\s*(.+)/is);
+    const actionMatch  = rawText.match(/ACTION:\s*(.+)/is);
 
-    const summary = (
-      summaryMatch?.[1] ||
-      rawText.split("\n")[0] ||
-      rawText
-    ).trim();
-    const action = (
-      actionMatch?.[1] ||
-      rawText.split("\n")[1] ||
-      "Monitor all zones."
-    ).trim();
+    const summary = (summaryMatch?.[1] || rawText.split('\n')[0] || rawText).trim();
+    const action  = (actionMatch?.[1] || rawText.split('\n')[1] || 'Monitor all zones.').trim();
 
     const result = {
       summary,
       actions: [action],
-      source: "vertex-ai",
-      model: MODEL,
+      source:  'vertex-ai',
+      model:   MODEL,
     };
 
     _cache = { insights: result, generatedAt: now };
     log.info(
-      { mode, avgDensity: avg.toFixed(2), model: MODEL, source: "vertex-ai" },
-      "Gemini stadium insights generated",
+      { mode, avgDensity: avg.toFixed(2), model: MODEL, source: 'vertex-ai' },
+      'Gemini stadium insights generated'
     );
     return result;
   } catch (err) {
-    log.warn(
-      { err: err.message },
-      "Vertex AI unavailable — using rule-based fallback",
-    );
+    log.warn({ err: err.message }, 'Vertex AI unavailable — using rule-based fallback');
     const fallback = ruleBasedInsights(densityMap, mode);
     _cache = { insights: fallback, generatedAt: now };
     return fallback;
